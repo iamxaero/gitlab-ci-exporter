@@ -1,0 +1,10 @@
+Gitlab Name: gitlab
+
+# Grouping branches
+# Support golang regexp
+Default branch: other
+Branches:
+  - ^master$
+  - ^main$
+  - ^dev$
+  - ^release-
