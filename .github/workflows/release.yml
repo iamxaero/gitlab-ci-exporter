@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+          cache: true
+
+      - name: Build binaries (linux/amd64)
+        run: |
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags 'netgo' -ldflags '-s -w' -o dist/gitlab-ci-exporter-linux-amd64
+
+      - name: Build binaries (linux/arm64)
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -tags 'netgo' -ldflags '-s -w' -o dist/gitlab-ci-exporter-linux-arm64
+
+      - name: Copy Kubernetes manifest
+        run: cp k8s-manifest.yaml dist/
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum gitlab-ci-exporter-* k8s-manifest.yaml > SHA256SUMS
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/gitlab-ci-exporter-linux-amd64
+            dist/gitlab-ci-exporter-linux-arm64
+            dist/k8s-manifest.yaml
+            dist/SHA256SUMS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
