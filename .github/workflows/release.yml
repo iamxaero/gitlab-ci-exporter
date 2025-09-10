@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag name to release (e.g., v1.2.3)
+        required: true
 
 permissions:
   contents: write
@@ -12,8 +17,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve tag
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.vars.outputs.tag }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -41,6 +58,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.vars.outputs.tag }}
           files: |
             dist/gitlab-ci-exporter-linux-amd64
             dist/gitlab-ci-exporter-linux-arm64
